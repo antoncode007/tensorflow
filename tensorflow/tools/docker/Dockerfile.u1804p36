@@ -1,0 +1,87 @@
+FROM ubuntu:18.04
+
+# Supress warnings about missing front-end. As recommended at:
+# http://stackoverflow.com/questions/22466255/is-it-possibe-to-answer-dialog-questions-when-installing-under-docker
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Essentials: developer tools, build tools, OpenBLAS
+RUN apt-get update
+RUN apt-get install -y locales locales-all
+ENV LC_ALL en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US.UTF-8
+
+RUN apt-get install -y --no-install-recommends \
+    apt-utils git curl vim unzip openssh-client wget nano \
+    build-essential cmake \
+    libopenblas-dev \
+    python-scipy \
+    liblapack-dev \
+    gfortran \
+    libffi-dev \
+    libxslt-dev \
+    g++ \
+    python-dev \
+    python-pip \
+    python3-pip \
+    python3-setuptools
+RUN ln -s -f /usr/bin/python3 /usr/bin/python
+
+# Science libraries and other common packages
+RUN pip3 --no-cache-dir install \
+    numpy \
+    scipy \
+    sklearn \
+    scikit-image \
+    pandas \
+    matplotlib \
+    Cython \
+    requests \
+    h5py \
+    ipykernel \
+    gensim \
+    numexpr \
+    # bottleneck \
+    sqlalchemy \
+    nltk \
+    seaborn \
+    xgboost \
+    matplotlib \
+    jupyter \
+    tqdm
+
+#
+# Jupyter Notebook
+#
+# # Allow access from outside the container, and skip trying to open a browser.
+# # NOTE: disable authentication token for convenience. DON'T DO THIS ON A PUBLIC SERVER.
+# RUN pip3 --no-cache-dir install jupyter && \
+#     mkdir /root/.jupyter && \
+#     echo "c.NotebookApp.ip = '*'" \
+#          "\nc.NotebookApp.open_browser = False" \
+#          "\nc.NotebookApp.token = ''" \
+#          > /root/.jupyter/jupyter_notebook_config.py
+# EXPOSE 8888
+
+# Set up our notebook config.
+
+# Jupyter has issues with being run directly:
+#   https://github.com/ipython/ipython/issues/7062
+# We just add a little wrapper script.
+COPY jupyter_notebook_config.py /root/.jupyter/
+COPY run_jupyter.sh /
+
+
+
+
+#
+# Tensorflow 1.8.0 - CPU
+#
+RUN pip3 install --no-cache-dir --upgrade tensorflow 
+
+# Expose port for TensorBoard
+EXPOSE 6006
+EXPOSE 8888
+
+WORKDIR "/root"
+CMD ["/run_jupyter.sh", "--allow-root"]
